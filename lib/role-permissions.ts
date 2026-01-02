@@ -60,12 +60,12 @@ const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canViewAllData: true,
     canViewAssignedOnly: false,
     canCreateUsers: true,
-    canEditUsers: true,
-    canDeleteUsers: true,
+    canEditUsers: false, // Admin can only edit newly created documents, not existing users
+    canDeleteUsers: false, // Admin cannot delete users
     canEditSuperAdmin: false,
-    canChangeUserRoles: true,
+    canChangeUserRoles: false, // Admin cannot change roles
     canPromoteToSuperAdmin: false,
-    canManagePlatformSettings: true,
+    canManagePlatformSettings: false, // Only SuperAdmin can change settings
     canAccessAdminPanel: true,
     canManageFeatureVisibility: false,
     canViewAsOtherRoles: false,

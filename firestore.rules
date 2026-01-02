@@ -39,6 +39,17 @@ service cloud.firestore {
       return isAuthenticated() && 
         get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.organizationId == orgId;
     }
+    
+    // Check if this is a newly created document (created within last 24 hours)
+    function isNewDocument() {
+      return resource.data.createdAt != null && 
+        request.time.toMillis() - resource.data.createdAt.toMillis() < 86400000;
+    }
+    
+    // Check if the current user created this document
+    function isDocumentCreator() {
+      return resource.data.createdBy == request.auth.uid;
+    }
 
     // Users collection
     match /users/{userId} {
@@ -266,21 +277,20 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Team Members - read/write allowed for development
-    // TODO: Restrict to authenticated users in production
+    // Team Members - Admin can create and edit newly created docs, SuperAdmin can do everything
     match /teamMembers/{memberId} {
-      allow read: if true;
-      allow create: if true;
-      allow update: if true;
-      allow delete: if isAdmin();
+      allow read: if isAuthenticated();
+      allow create: if isAdmin(); // Admin and SuperAdmin can create
+      allow update: if isSuperAdmin() || (isAdmin() && (isNewDocument() || isDocumentCreator())); // Admin can only update newly created docs or docs they created
+      allow delete: if isSuperAdmin(); // Only SuperAdmin can delete
     }
 
-    // Platform Settings - Admin only
+    // Platform Settings - SuperAdmin only (Admin cannot change settings)
     match /platformSettings/{settingsId} {
-      allow read: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow read: if isAuthenticated();
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // =========================================================================
@@ -576,21 +586,17 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // Team Members Collection
+    // Team Members Collection (duplicate rule - keeping for clarity)
+    // Admin can create users and edit newly created/own docs, SuperAdmin has full control
     // =========================================================================
-    match /teamMembers/{memberId} {
-      allow read: if isAuthenticated();
-      allow create: if isAdmin();
-      allow update: if isAuthenticated() && (request.auth.uid == memberId || isAdmin());
-      allow delete: if isAdmin();
-    }
+    // Note: This rule is superseded by the earlier teamMembers rule
 
     // =========================================================================
-    // Platform Settings Collection
+    // Platform Settings Collection - SuperAdmin only
     // =========================================================================
     match /platformSettings/{settingId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if isSuperAdmin();
     }
 
     // =========================================================================
