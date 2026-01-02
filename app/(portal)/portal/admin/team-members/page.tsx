@@ -141,7 +141,7 @@ export default function TeamMembersPage() {
     bio: "",
     linkedIn: "",
     website: "",
-    role: "affiliate" as "admin" | "team" | "affiliate" | "consultant",
+    role: "affiliate" as "superadmin" | "admin" | "team" | "affiliate" | "consultant" | "viewer",
     status: "active" as "active" | "inactive" | "pending",
     // Leadership flags
     isCEO: false,
@@ -370,7 +370,7 @@ export default function TeamMembersPage() {
       bio: member.bio || "",
       linkedIn: member.linkedIn || "",
       website: member.website || "",
-      role: member.role,
+      role: member.role as "superadmin" | "admin" | "team" | "affiliate" | "consultant" | "viewer",
       status: member.status,
       isCEO: member.isCEO || false,
       isCOO: member.isCOO || false,
@@ -610,7 +610,7 @@ export default function TeamMembersPage() {
                     <Label htmlFor="role">Role *</Label>
                     <Select
                       value={formData.role}
-                      onValueChange={(value: "admin" | "team" | "affiliate" | "consultant") => 
+                      onValueChange={(value: "superadmin" | "admin" | "team" | "affiliate" | "consultant" | "viewer") => 
                         setFormData({ ...formData, role: value })
                       }
                     >

@@ -150,6 +150,9 @@ function mapTeamMemberToProfile(teamMember: TeamMemberDoc): Partial<UserProfile>
   };
 }
 
+// Available roles for role switching
+export type ViewableRole = "superadmin" | "admin" | "affiliate" | "viewer" | "customer" | "team_member";
+
 // Context type
 interface UserProfileContextType {
   profile: UserProfile;
@@ -171,6 +174,11 @@ interface UserProfileContextType {
   isAdmin: () => boolean;
   isSuperAdmin: () => boolean;
   signOut: () => Promise<void>;
+  // Role switching for SuperAdmin
+  viewAsRole: ViewableRole | null;
+  setViewAsRole: (role: ViewableRole | null) => void;
+  getEffectiveRole: () => ViewableRole;
+  isViewingAsOtherRole: boolean;
 }
 
 const UserProfileContext = createContext<UserProfileContextType | undefined>(undefined);
@@ -182,6 +190,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [linkedTeamMember, setLinkedTeamMember] = useState<TeamMemberDoc | null>(null);
+  const [viewAsRole, setViewAsRole] = useState<ViewableRole | null>(null);
 
   const profileCompletion = calculateProfileCompletion(profile);
   const networkingCompletion = calculateNetworkingCompletion(profile);
@@ -301,6 +310,16 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     return profile.role === "superadmin";
   };
 
+  const getEffectiveRole = (): ViewableRole => {
+    // If SuperAdmin is viewing as another role, return that role
+    if (viewAsRole && profile.role === "superadmin") {
+      return viewAsRole;
+    }
+    return profile.role;
+  };
+
+  const isViewingAsOtherRole = viewAsRole !== null && profile.role === "superadmin";
+
   const signOut = async () => {
     if (auth) {
       try {
@@ -338,6 +357,10 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
         isAdmin,
         isSuperAdmin,
         signOut,
+        viewAsRole,
+        setViewAsRole,
+        getEffectiveRole,
+        isViewingAsOtherRole,
       }}
     >
       {children}

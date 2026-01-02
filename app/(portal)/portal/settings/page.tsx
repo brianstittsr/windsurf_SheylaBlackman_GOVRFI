@@ -58,6 +58,9 @@ import {
   Instagram,
   Globe,
   Shield,
+  RotateCcw,
+  Copy,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WEBHOOK_EVENTS, testWebhookConnection, sendToBrianStitt, type WebhookEventType } from "@/lib/mattermost";
@@ -67,6 +70,13 @@ import { COLLECTIONS, type PlatformSettingsDoc } from "@/lib/schema";
 import { logSettingsUpdated } from "@/lib/activity-logger";
 import { useUserProfile } from "@/contexts/user-profile-context";
 import Link from "next/link";
+import { 
+  useFeatureVisibilityAdmin, 
+  FEATURES, 
+  getDefaultRoleSettings,
+  type FeatureCategory 
+} from "@/lib/feature-visibility";
+import { ROLE_LABELS, type UserRole } from "@/lib/role-permissions";
 import { 
   showInAppNotification, 
   requestNotificationPermission, 
@@ -87,30 +97,6 @@ interface ApiKeyConfig {
 
 const apiConfigs: ApiKeyConfig[] = [
   {
-    id: "mattermost",
-    name: "Mattermost",
-    description: "Team communication and collaboration platform",
-    icon: MessageSquare,
-    keyField: "Personal Access Token",
-    webhookField: "Incoming Webhook URL",
-    additionalFields: [
-      { name: "serverUrl", label: "Server URL", placeholder: "https://your-mattermost-server.com" },
-      { name: "teamId", label: "Team ID", placeholder: "team-id" },
-    ],
-    status: "disconnected",
-  },
-  {
-    id: "apollo",
-    name: "Apollo.AI",
-    description: "Sales intelligence and engagement platform",
-    icon: Zap,
-    keyField: "API Key",
-    additionalFields: [
-      { name: "accountId", label: "Account ID", placeholder: "your-account-id" },
-    ],
-    status: "disconnected",
-  },
-  {
     id: "gohighlevel",
     name: "GoHighLevel",
     description: "All-in-one marketing and CRM platform",
@@ -119,18 +105,6 @@ const apiConfigs: ApiKeyConfig[] = [
     additionalFields: [
       { name: "locationId", label: "Location ID", placeholder: "location-id" },
       { name: "agencyId", label: "Agency ID", placeholder: "agency-id" },
-    ],
-    status: "disconnected",
-  },
-  {
-    id: "zoom",
-    name: "Zoom",
-    description: "Video conferencing and meetings",
-    icon: Video,
-    keyField: "API Key",
-    additionalFields: [
-      { name: "apiSecret", label: "API Secret", placeholder: "your-api-secret" },
-      { name: "accountId", label: "Account ID", placeholder: "account-id" },
     ],
     status: "disconnected",
   },
@@ -145,26 +119,6 @@ const apiConfigs: ApiKeyConfig[] = [
       { name: "clientSecret", label: "Client Secret", placeholder: "your-client-secret" },
       { name: "organizationId", label: "Organization ID (optional)", placeholder: "organization-urn" },
     ],
-    status: "disconnected",
-  },
-  {
-    id: "docuseal",
-    name: "DocuSeal",
-    description: "Electronic document signing and management",
-    icon: FileSignature,
-    keyField: "API Key",
-    additionalFields: [
-      { name: "webhookSecret", label: "Webhook Secret (optional)", placeholder: "your-webhook-secret" },
-    ],
-    status: "disconnected",
-  },
-  {
-    id: "mercury",
-    name: "Mercury Bank",
-    description: "Business banking with API access for accounts and transactions",
-    icon: Server,
-    keyField: "API Token",
-    additionalFields: [],
     status: "disconnected",
   },
 ];
@@ -493,8 +447,6 @@ function SettingsPageContent() {
         <TabsList>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="llm">LLM Configuration</TabsTrigger>
-          <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="social">Social Links</TabsTrigger>
           {isSuperAdmin && (
             <TabsTrigger value="features">
@@ -778,666 +730,6 @@ function SettingsPageContent() {
           </Card>
         </TabsContent>
 
-        {/* Webhooks Tab */}
-        <TabsContent value="webhooks" className="space-y-6">
-          {/* Send to Brian Stitt - Featured Card */}
-          <Card className="border-primary/50 bg-primary/5">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary">
-                    <User className="h-6 w-6 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      Send to Brian Stitt
-                      <Badge variant="default">Quick Action</Badge>
-                    </CardTitle>
-                    <CardDescription>
-                      Send a direct message to Brian Stitt&apos;s Mattermost channel
-                    </CardDescription>
-                  </div>
-                </div>
-                <Dialog open={brianStittDialogOpen} onOpenChange={setBrianStittDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Send className="mr-2 h-4 w-4" />
-                      Send Message
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                      <DialogTitle>Send Message to Brian Stitt</DialogTitle>
-                      <DialogDescription>
-                        This message will be sent directly to Brian Stitt&apos;s Mattermost channel via webhook.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="brianMessage">Message</Label>
-                        <Textarea
-                          id="brianMessage"
-                          placeholder="Enter your message here..."
-                          value={brianStittMessage}
-                          onChange={(e) => setBrianStittMessage(e.target.value)}
-                          rows={5}
-                        />
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        <p>The message will include:</p>
-                        <ul className="list-disc list-inside mt-1">
-                          <li>Your message content</li>
-                          <li>Timestamp</li>
-                          <li>Sender information</li>
-                        </ul>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setBrianStittDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button onClick={handleSendToBrianStitt} disabled={sendingMessage}>
-                        {sendingMessage ? (
-                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Send className="mr-2 h-4 w-4" />
-                        )}
-                        Send Message
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-          </Card>
-
-          {/* Webhook Configuration */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Webhook className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Webhook Configuration</CardTitle>
-                  <CardDescription>
-                    Configure webhooks for real-time event notifications to Mattermost
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <h4 className="font-medium mb-2">Setup Instructions</h4>
-                <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                  <li>Go to Mattermost → Main Menu → Integrations → Incoming Webhooks</li>
-                  <li>Click &quot;Add Incoming Webhook&quot;</li>
-                  <li>Select the channel (e.g., &quot;SVP Notifications&quot;)</li>
-                  <li>Copy the webhook URL and paste it below</li>
-                </ol>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="mattermostWebhook">Mattermost Webhook URL</Label>
-                <Input
-                  id="mattermostWebhook"
-                  placeholder="https://your-mattermost.com/hooks/xxx-xxx-xxx"
-                  value={apiKeys["mattermost"]?.webhook || ""}
-                  onChange={(e) => updateApiKey("mattermost", "webhook", e.target.value)}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => testConnection("webhook")}
-                  disabled={testingStatus["webhook"] === "testing" || !apiKeys["mattermost"]?.webhook}
-                >
-                  {testingStatus["webhook"] === "testing" ? (
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  ) : testingStatus["webhook"] === "success" ? (
-                    <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-                  ) : testingStatus["webhook"] === "error" ? (
-                    <XCircle className="mr-2 h-4 w-4 text-red-500" />
-                  ) : (
-                    <TestTube className="mr-2 h-4 w-4" />
-                  )}
-                  Test Webhook
-                </Button>
-                {testingStatus["webhook"] === "success" && (
-                  <Badge variant="default" className="self-center">Connected</Badge>
-                )}
-                {testingStatus["webhook"] === "error" && (
-                  <Badge variant="destructive" className="self-center">Failed</Badge>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Event Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Webhook Events</CardTitle>
-              <CardDescription>
-                Choose which events trigger webhook notifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 md:grid-cols-2">
-                {WEBHOOK_EVENTS.map((event) => (
-                  <div 
-                    key={event.type} 
-                    className={cn(
-                      "flex items-center justify-between p-4 border rounded-lg transition-colors",
-                      event.type === "send_to_brian_stitt" && "border-primary/50 bg-primary/5",
-                      webhookEvents[event.type] && "border-green-500/50 bg-green-500/5"
-                    )}
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{event.label}</span>
-                        {event.type === "send_to_brian_stitt" && (
-                          <Badge variant="outline" className="text-xs">Featured</Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">{event.description}</p>
-                    </div>
-                    <Switch 
-                      checked={webhookEvents[event.type]} 
-                      onCheckedChange={() => toggleWebhookEvent(event.type)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Webhook Examples */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Webhook Payload Examples</CardTitle>
-              <CardDescription>
-                Reference examples based on Mattermost incoming webhook documentation
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Basic Text Message */}
-              <div className="space-y-2">
-                <h4 className="font-medium flex items-center gap-2">
-                  <Badge variant="outline">Basic</Badge>
-                  Simple Text Message
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  The simplest webhook payload - just send text content.
-                </p>
-                <pre className="p-4 bg-muted rounded-lg text-xs overflow-x-auto">
-{`{
-  "text": "Hello, this is some text\\nThis is more text. 🎉"
-}`}
-                </pre>
-              </div>
-
-              {/* With Username and Icon */}
-              <div className="space-y-2">
-                <h4 className="font-medium flex items-center gap-2">
-                  <Badge variant="outline">Customized</Badge>
-                  Custom Username & Icon
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Override the bot username and avatar icon.
-                </p>
-                <pre className="p-4 bg-muted rounded-lg text-xs overflow-x-auto">
-{`{
-  "channel": "town-square",
-  "username": "SVP-Bot",
-  "icon_url": "https://your-site.com/logo.png",
-  "icon_emoji": ":rocket:",
-  "text": "#### New notification from SVP Platform"
-}`}
-                </pre>
-              </div>
-
-              {/* Markdown Table */}
-              <div className="space-y-2">
-                <h4 className="font-medium flex items-center gap-2">
-                  <Badge variant="outline">Advanced</Badge>
-                  Markdown with Tables
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Rich formatting with markdown tables and @mentions.
-                </p>
-                <pre className="p-4 bg-muted rounded-lg text-xs overflow-x-auto">
-{`{
-  "channel": "svp-notifications",
-  "username": "test-automation",
-  "icon_url": "https://mattermost.com/wp-content/uploads/2022/02/icon.png",
-  "text": "#### Test results for July 27th, 2024\\n@channel please review.\\n\\n| Component | Tests Run | Tests Failed |\\n|:-----------|:-----------:|:--------------|\\n| Server | 948 | ✅ 0 |\\n| Web Client | 123 | ⚠️ 2 |\\n| iOS Client | 78 | ⚠️ 3 |"
-}`}
-                </pre>
-              </div>
-
-              {/* With Attachments */}
-              <div className="space-y-2">
-                <h4 className="font-medium flex items-center gap-2">
-                  <Badge variant="outline">Rich</Badge>
-                  Message Attachments
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Structured attachments with colors, fields, and formatting.
-                </p>
-                <pre className="p-4 bg-muted rounded-lg text-xs overflow-x-auto">
-{`{
-  "channel": "deals",
-  "username": "SVP Platform",
-  "text": "### 🎯 New Lead Created",
-  "attachments": [{
-    "fallback": "New lead from Precision Parts",
-    "color": "#36a64f",
-    "pretext": "A new lead has been added to the pipeline",
-    "author_name": "Sarah Mitchell",
-    "author_icon": "https://example.com/avatar.png",
-    "title": "Precision Parts Manufacturing",
-    "title_link": "https://svp-platform.com/leads/123",
-    "fields": [
-      { "title": "Contact", "value": "John Harrison", "short": true },
-      { "title": "Value", "value": "$150,000", "short": true },
-      { "title": "Source", "value": "Referral", "short": true },
-      { "title": "Stage", "value": "Discovery", "short": true }
-    ],
-    "footer": "SVP Platform",
-    "footer_icon": "https://svp-platform.com/icon.png"
-  }]
-}`}
-                </pre>
-              </div>
-
-              {/* With Props Card (Side Panel) */}
-              <div className="space-y-2">
-                <h4 className="font-medium flex items-center gap-2">
-                  <Badge variant="outline">Extended</Badge>
-                  Side Panel Card
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Display additional details in the right-hand side panel using the card property.
-                </p>
-                <pre className="p-4 bg-muted rounded-lg text-xs overflow-x-auto">
-{`{
-  "channel": "deals",
-  "username": "Winning-bot",
-  "text": "#### 🎉 We won a new deal!",
-  "props": {
-    "card": "**Deal Information:**\\n\\n[View in CRM](https://crm.example.com/deal/123)\\n\\n- **Salesperson:** Bob McKnight\\n- **Amount:** $300,020.00\\n- **Close Date:** Dec 15, 2024\\n- **Product:** V-Edge Assessment"
-  }
-}`}
-                </pre>
-              </div>
-
-              {/* Direct Message */}
-              <div className="space-y-2">
-                <h4 className="font-medium flex items-center gap-2">
-                  <Badge variant="outline">DM</Badge>
-                  Direct Message to User
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Send a direct message to a specific user using @username.
-                </p>
-                <pre className="p-4 bg-muted rounded-lg text-xs overflow-x-auto">
-{`{
-  "channel": "@brian.stitt",
-  "username": "SVP Platform",
-  "text": "### 📬 Direct Message\\n\\nHey Brian, you have a new referral waiting for review!\\n\\n[View Referral](https://svp-platform.com/referrals/456)"
-}`}
-                </pre>
-              </div>
-
-              {/* SVP Platform Event Example */}
-              <div className="space-y-2">
-                <h4 className="font-medium flex items-center gap-2">
-                  <Badge>SVP</Badge>
-                  One-to-One Meeting Scheduled
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Example of an SVP Platform event notification.
-                </p>
-                <pre className="p-4 bg-muted rounded-lg text-xs overflow-x-auto">
-{`{
-  "username": "SVP Platform",
-  "icon_emoji": ":handshake:",
-  "text": "### 🤝 One-to-One Meeting Scheduled",
-  "attachments": [{
-    "color": "#0066cc",
-    "fields": [
-      { "title": "Initiator", "value": "Sarah Mitchell", "short": true },
-      { "title": "Partner", "value": "Marcus Chen", "short": true },
-      { "title": "Date", "value": "Dec 15, 2024 at 10:00 AM", "short": true },
-      { "title": "Location", "value": "Starbucks, South Blvd", "short": true }
-    ],
-    "footer": "SVP Platform • Affiliate Networking"
-  }]
-}`}
-                </pre>
-              </div>
-
-              {/* Referral Submitted Example */}
-              <div className="space-y-2">
-                <h4 className="font-medium flex items-center gap-2">
-                  <Badge>SVP</Badge>
-                  Referral Submitted
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Notification when an affiliate submits a referral.
-                </p>
-                <pre className="p-4 bg-muted rounded-lg text-xs overflow-x-auto">
-{`{
-  "username": "SVP Platform",
-  "icon_emoji": ":link:",
-  "text": "### 🔗 New Referral Submitted",
-  "attachments": [{
-    "color": "#e74c3c",
-    "fields": [
-      { "title": "From", "value": "Jennifer Rodriguez", "short": true },
-      { "title": "To", "value": "David Thompson", "short": true },
-      { "title": "Prospect", "value": "Maria Gonzalez", "short": true },
-      { "title": "Company", "value": "Lean Machine Shop", "short": true },
-      { "title": "SVP Referral", "value": "Yes ⭐", "short": true },
-      { "title": "Est. Value", "value": "$75,000", "short": true }
-    ],
-    "footer": "SVP Platform • Referral Network"
-  }],
-  "props": {
-    "card": "**Referral Details:**\\n\\n- **Type:** Short-term\\n- **Service Interest:** V-Edge Assessment\\n- **Description:** Completed lean transformation, now ready for automation assessment.\\n\\n[View Full Referral](https://svp-platform.com/referrals/ref-002)"
-  }
-}`}
-                </pre>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notifications Tab */}
-        <TabsContent value="notifications" className="space-y-6">
-          {/* Sync with Mattermost */}
-          <Card className="border-primary/50 bg-primary/5">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary">
-                  <BellRing className="h-6 w-6 text-primary-foreground" />
-                </div>
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    Sync with Mattermost
-                    <Badge variant="default">Playbooks</Badge>
-                  </CardTitle>
-                  <CardDescription>
-                    Mirror Mattermost notifications in the browser when the site is open
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg bg-background">
-                <div className="flex items-center gap-3">
-                  <MessageSquare className="h-5 w-5 text-primary" />
-                  <div>
-                    <Label>Sync Mattermost Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      When enabled, webhook events sent to Mattermost will also appear as in-browser notifications
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  checked={notificationSettings.syncWithMattermost}
-                  onCheckedChange={(checked) => {
-                    setNotificationSettings(prev => ({ ...prev, syncWithMattermost: checked }));
-                    setHasChanges(true);
-                  }}
-                />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                This allows you to see real-time notifications for Rocks, Issues, To-Dos, Meetings, and other Traction/EOS events 
-                directly in your browser, mirroring what gets sent to your Mattermost channels.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* In-App Notifications */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Monitor className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>In-App Notifications</CardTitle>
-                  <CardDescription>
-                    Configure how notifications appear within the SVP Platform
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Bell className="h-5 w-5 text-primary" />
-                  <div>
-                    <Label>Toast Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Show popup notifications in the corner of the screen
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  checked={notificationSettings.inAppEnabled}
-                  onCheckedChange={(checked) => {
-                    setNotificationSettings(prev => ({ ...prev, inAppEnabled: checked }));
-                    setHasChanges(true);
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  {notificationSettings.soundEnabled ? (
-                    <Volume2 className="h-5 w-5 text-primary" />
-                  ) : (
-                    <VolumeX className="h-5 w-5 text-muted-foreground" />
-                  )}
-                  <div>
-                    <Label>Sound Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Play a sound when notifications arrive
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  checked={notificationSettings.soundEnabled}
-                  onCheckedChange={(checked) => {
-                    setNotificationSettings(prev => ({ ...prev, soundEnabled: checked }));
-                    setHasChanges(true);
-                  }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Browser Notifications */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <BellRing className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Browser Notifications</CardTitle>
-                  <CardDescription>
-                    Receive notifications even when the browser tab is in the background
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Bell className="h-5 w-5 text-primary" />
-                  <div>
-                    <Label>Browser Push Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Show system notifications from your browser
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {browserPermission === "granted" ? (
-                    <Badge variant="default" className="mr-2">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Enabled
-                    </Badge>
-                  ) : browserPermission === "denied" ? (
-                    <Badge variant="destructive" className="mr-2">
-                      <XCircle className="h-3 w-3 mr-1" />
-                      Blocked
-                    </Badge>
-                  ) : browserPermission === "unsupported" ? (
-                    <Badge variant="secondary" className="mr-2">
-                      Not Supported
-                    </Badge>
-                  ) : null}
-                  <Switch
-                    checked={notificationSettings.browserEnabled}
-                    disabled={browserPermission === "denied" || browserPermission === "unsupported"}
-                    onCheckedChange={async (checked) => {
-                      if (checked && browserPermission !== "granted") {
-                        const permission = await requestNotificationPermission();
-                        setBrowserPermission(permission);
-                        if (permission !== "granted") {
-                          return;
-                        }
-                      }
-                      setNotificationSettings(prev => ({ ...prev, browserEnabled: checked }));
-                      setHasChanges(true);
-                    }}
-                  />
-                </div>
-              </div>
-
-              {browserPermission === "denied" && (
-                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-destructive">Browser notifications blocked</p>
-                      <p className="text-sm text-muted-foreground">
-                        You&apos;ve blocked notifications for this site. To enable them, click the lock icon in your browser&apos;s address bar and change the notification setting.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {browserPermission === "default" && (
-                <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    When you enable browser notifications, you&apos;ll be prompted to allow notifications from this site.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Test Notification */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Test Notifications</CardTitle>
-              <CardDescription>
-                Send a test notification to verify your settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    showInAppNotification("rock_completed", {
-                      title: "Test Rock",
-                      name: "Q4 Revenue Target",
-                    });
-                  }}
-                  disabled={!notificationSettings.inAppEnabled}
-                >
-                  <Bell className="mr-2 h-4 w-4" />
-                  Test Toast
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    showInAppNotification("rock_at_risk", {
-                      title: "Test Warning",
-                      name: "Customer Onboarding Process",
-                    });
-                  }}
-                  disabled={!notificationSettings.inAppEnabled}
-                >
-                  <AlertCircle className="mr-2 h-4 w-4" />
-                  Test Warning
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    showInAppNotification("new_lead", {
-                      name: "Precision Manufacturing Co.",
-                      company: "Precision Manufacturing Co.",
-                    });
-                  }}
-                  disabled={!notificationSettings.inAppEnabled}
-                >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Test Success
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                These test notifications demonstrate how different event types will appear in your browser.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Notification Events */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Synced Event Types</CardTitle>
-              <CardDescription>
-                These events will trigger in-browser notifications when synced with Mattermost
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-2 md:grid-cols-2">
-                {WEBHOOK_EVENTS.filter(e => e.type !== "send_to_brian_stitt").map((event) => (
-                  <div 
-                    key={event.type}
-                    className={cn(
-                      "flex items-center gap-2 p-3 border rounded-lg text-sm",
-                      webhookEvents[event.type] ? "border-green-500/30 bg-green-500/5" : "opacity-50"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-2 h-2 rounded-full",
-                      webhookEvents[event.type] ? "bg-green-500" : "bg-muted-foreground"
-                    )} />
-                    <div>
-                      <span className="font-medium">{event.label}</span>
-                      {event.category === "traction" && (
-                        <Badge variant="outline" className="ml-2 text-xs">EOS</Badge>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-sm text-muted-foreground mt-4">
-                Enable or disable specific events in the <strong>Webhooks</strong> tab. Events that are enabled there will also trigger in-browser notifications when sync is active.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* Social Links Tab */}
         <TabsContent value="social" className="space-y-6">
           <Card>
@@ -1617,7 +909,265 @@ function SettingsPageContent() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Feature Visibility Tab - SuperAdmin Only */}
+        {isSuperAdmin && (
+          <TabsContent value="features" className="space-y-6">
+            <FeatureVisibilitySettings />
+          </TabsContent>
+        )}
       </Tabs>
+    </div>
+  );
+}
+
+// Feature Visibility Settings Component
+function FeatureVisibilitySettings() {
+  const {
+    loading: featureLoading,
+    saving: featureSaving,
+    error: featureError,
+    getRoleSettings,
+    saveRoleSettings,
+    resetRoleToDefaults,
+    copyFromRole,
+    enableAllFeatures,
+    disableAllFeatures,
+    countEnabledFeatures,
+  } = useFeatureVisibilityAdmin();
+
+  const [selectedRole, setSelectedRole] = useState<UserRole>("affiliate");
+  const [localSettings, setLocalSettings] = useState<Record<string, boolean>>({});
+  const [hasLocalChanges, setHasLocalChanges] = useState(false);
+  const [copyFromRoleValue, setCopyFromRoleValue] = useState<string>("");
+
+  const ALL_ROLES: UserRole[] = ["superadmin", "admin", "team_member", "affiliate", "consultant", "customer", "viewer"];
+
+  // Load settings when role changes
+  useEffect(() => {
+    const settings = getRoleSettings(selectedRole);
+    setLocalSettings(settings);
+    setHasLocalChanges(false);
+  }, [selectedRole, getRoleSettings]);
+
+  const handleToggleFeature = (featureName: string) => {
+    setLocalSettings(prev => ({
+      ...prev,
+      [featureName]: !prev[featureName]
+    }));
+    setHasLocalChanges(true);
+  };
+
+  const handleSave = async () => {
+    const success = await saveRoleSettings(selectedRole, localSettings);
+    if (success) {
+      setHasLocalChanges(false);
+    }
+  };
+
+  const handleReset = async () => {
+    await resetRoleToDefaults(selectedRole);
+    setLocalSettings(getDefaultRoleSettings(selectedRole));
+    setHasLocalChanges(false);
+  };
+
+  const handleCopyFrom = async () => {
+    if (copyFromRoleValue) {
+      await copyFromRole(copyFromRoleValue, selectedRole);
+      setLocalSettings(getRoleSettings(copyFromRoleValue));
+      setCopyFromRoleValue("");
+      setHasLocalChanges(false);
+    }
+  };
+
+  const handleEnableAll = () => {
+    const allEnabled = FEATURES.reduce((acc, f) => ({ ...acc, [f.name]: true }), {} as Record<string, boolean>);
+    setLocalSettings(allEnabled);
+    setHasLocalChanges(true);
+  };
+
+  const handleDisableAll = () => {
+    const allDisabled = FEATURES.reduce((acc, f) => ({ 
+      ...acc, 
+      [f.name]: f.name === "Command Center" // Always keep Command Center
+    }), {} as Record<string, boolean>);
+    setLocalSettings(allDisabled);
+    setHasLocalChanges(true);
+  };
+
+  // Group features by category
+  const featuresByCategory = FEATURES.reduce((acc, feature) => {
+    if (!acc[feature.category]) {
+      acc[feature.category] = [];
+    }
+    acc[feature.category].push(feature);
+    return acc;
+  }, {} as Record<FeatureCategory, typeof FEATURES>);
+
+  const categoryLabels: Record<FeatureCategory, string> = {
+    navigation: "Navigation",
+    work: "Work & Tools",
+    admin: "Administration",
+    ai: "AI Features",
+    initiatives: "Initiatives",
+  };
+
+  const enabledCount = Object.values(localSettings).filter(v => v === true).length;
+
+  if (featureLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Shield className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <CardTitle>Feature Visibility by Role</CardTitle>
+              <CardDescription>
+                Configure which features are visible to each user role. Changes take effect immediately.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Role Selector */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            {ALL_ROLES.map((role) => {
+              const { enabled, total } = countEnabledFeatures(role);
+              return (
+                <Button
+                  key={role}
+                  variant={selectedRole === role ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedRole(role)}
+                  className="relative"
+                >
+                  {ROLE_LABELS[role]}
+                  <Badge 
+                    variant="secondary" 
+                    className={cn(
+                      "ml-2 text-xs",
+                      selectedRole === role && "bg-primary-foreground/20"
+                    )}
+                  >
+                    {enabled}/{total}
+                  </Badge>
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="flex flex-wrap items-center gap-2 p-4 bg-muted rounded-lg mb-6">
+            <span className="text-sm font-medium mr-2">Quick Actions:</span>
+            <Button variant="outline" size="sm" onClick={handleEnableAll}>
+              Show All
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDisableAll}>
+              Hide All
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleReset}>
+              <RotateCcw className="h-4 w-4 mr-1" />
+              Reset to Defaults
+            </Button>
+            <div className="flex items-center gap-2 ml-auto">
+              <Select value={copyFromRoleValue} onValueChange={setCopyFromRoleValue}>
+                <SelectTrigger className="w-[160px] h-8">
+                  <SelectValue placeholder="Copy from role..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALL_ROLES.filter(r => r !== selectedRole).map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {ROLE_LABELS[role]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleCopyFrom}
+                disabled={!copyFromRoleValue}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {featureError && (
+            <div className="p-4 mb-6 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                <span className="text-sm">{featureError}</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Feature Categories */}
+      {Object.entries(featuresByCategory).map(([category, features]) => (
+        <Card key={category}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">{categoryLabels[category as FeatureCategory]}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {features.map((feature) => (
+                <div
+                  key={feature.id}
+                  className={cn(
+                    "flex items-center justify-between p-3 border rounded-lg transition-colors",
+                    localSettings[feature.name] 
+                      ? "border-green-500/30 bg-green-500/5" 
+                      : "border-muted bg-muted/30"
+                  )}
+                >
+                  <div className="space-y-0.5">
+                    <span className="text-sm font-medium">{feature.name}</span>
+                    <p className="text-xs text-muted-foreground">{feature.description}</p>
+                  </div>
+                  <Switch
+                    checked={localSettings[feature.name] ?? true}
+                    onCheckedChange={() => handleToggleFeature(feature.name)}
+                    disabled={feature.name === "Command Center"} // Always keep Command Center
+                  />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+
+      {/* Save Button */}
+      <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+        <div className="flex items-center gap-2">
+          <Users className="h-5 w-5 text-muted-foreground" />
+          <span className="text-sm">
+            <strong>{ROLE_LABELS[selectedRole]}</strong> can see{" "}
+            <Badge variant="outline">{enabledCount}</Badge> of{" "}
+            <Badge variant="outline">{FEATURES.length}</Badge> features
+          </span>
+        </div>
+        <Button onClick={handleSave} disabled={featureSaving || !hasLocalChanges}>
+          {featureSaving ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          {featureSaving ? "Saving..." : hasLocalChanges ? "Save Changes" : "Saved"}
+        </Button>
+      </div>
     </div>
   );
 }

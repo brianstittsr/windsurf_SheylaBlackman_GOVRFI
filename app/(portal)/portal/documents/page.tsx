@@ -47,117 +47,17 @@ export const metadata: Metadata = {
   description: "Manage and share documents across your organization",
 };
 
-const documents = [
-  {
-    id: "1",
-    name: "ABC Manufacturing - Proposal v2.pdf",
-    type: "pdf",
-    size: "2.4 MB",
-    folder: "Proposals",
-    uploadedBy: "John Doe",
-    uploadedAt: "2025-01-05",
-    shared: true,
-  },
-  {
-    id: "2",
-    name: "ISO 9001 Implementation Checklist.xlsx",
-    type: "spreadsheet",
-    size: "156 KB",
-    folder: "Templates",
-    uploadedBy: "Sarah Williams",
-    uploadedAt: "2025-01-04",
-    shared: true,
-  },
-  {
-    id: "3",
-    name: "Supplier Readiness Assessment Template.docx",
-    type: "document",
-    size: "89 KB",
-    folder: "Templates",
-    uploadedBy: "Mike Roberts",
-    uploadedAt: "2025-01-03",
-    shared: true,
-  },
-  {
-    id: "4",
-    name: "XYZ Industries - Site Photos.zip",
-    type: "archive",
-    size: "45.2 MB",
-    folder: "Projects",
-    uploadedBy: "Jane Doe",
-    uploadedAt: "2025-01-02",
-    shared: false,
-  },
-  {
-    id: "5",
-    name: "Q4 2024 Performance Report.pdf",
-    type: "pdf",
-    size: "1.8 MB",
-    folder: "Reports",
-    uploadedBy: "John Doe",
-    uploadedAt: "2024-12-31",
-    shared: true,
-  },
-  {
-    id: "6",
-    name: "Affiliate Capability Matrix.xlsx",
-    type: "spreadsheet",
-    size: "234 KB",
-    folder: "Internal",
-    uploadedBy: "Sarah Williams",
-    uploadedAt: "2024-12-28",
-    shared: false,
-  },
-  {
-    id: "7",
-    name: "Manufacturing Nexus Event Slides.pptx",
-    type: "presentation",
-    size: "12.5 MB",
-    folder: "Marketing",
-    uploadedBy: "Jane Doe",
-    uploadedAt: "2024-12-20",
-    shared: true,
-  },
-  {
-    id: "8",
-    name: "ABC Manufacturing - Master Service Agreement.pdf",
-    type: "pdf",
-    size: "1.2 MB",
-    folder: "Agreements",
-    uploadedBy: "Brian Stitt",
-    uploadedAt: "2025-01-06",
-    shared: true,
-  },
-  {
-    id: "9",
-    name: "XYZ Industries - NDA v2 (Signed).pdf",
-    type: "pdf",
-    size: "456 KB",
-    folder: "Agreements",
-    uploadedBy: "Sarah Williams",
-    uploadedAt: "2025-01-04",
-    shared: true,
-  },
-  {
-    id: "10",
-    name: "Precision Parts - Consulting Agreement (Rev 3).pdf",
-    type: "pdf",
-    size: "890 KB",
-    folder: "Agreements",
-    uploadedBy: "Brian Stitt",
-    uploadedAt: "2024-12-15",
-    shared: false,
-  },
-];
+// Documents will be loaded from Firebase
+const documents: any[] = [];
 
 const folders = [
-  { name: "All Documents", count: 45 },
-  { name: "Proposals", count: 12 },
-  { name: "Templates", count: 8 },
-  { name: "Projects", count: 15 },
-  { name: "Reports", count: 6 },
-  { name: "Marketing", count: 4 },
-  { name: "Agreements", count: 3 },
+  { name: "All Documents", count: 0 },
+  { name: "Proposals", count: 0 },
+  { name: "Templates", count: 0 },
+  { name: "Projects", count: 0 },
+  { name: "Reports", count: 0 },
+  { name: "Marketing", count: 0 },
+  { name: "Agreements", count: 0 },
 ];
 
 function getFileIcon(type: string) {
@@ -267,81 +167,20 @@ export default function DocumentsPage() {
             </CardContent>
           </Card>
 
-          {/* Documents Table */}
+          {/* Empty State */}
           <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Folder</TableHead>
-                    <TableHead>Size</TableHead>
-                    <TableHead>Uploaded</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {documents.map((doc) => (
-                    <TableRow key={doc.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          {getFileIcon(doc.type)}
-                          <div>
-                            <p className="font-medium">{doc.name}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <User className="h-3 w-3" />
-                              {doc.uploadedBy}
-                              {doc.shared && (
-                                <Badge variant="outline" className="text-xs">
-                                  <Share2 className="h-3 w-3 mr-1" />
-                                  Shared
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{doc.folder}</Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{doc.size}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {formatDate(doc.uploadedAt)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Download className="mr-2 h-4 w-4" />
-                              Download
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Share2 className="mr-2 h-4 w-4" />
-                              Share
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">No documents yet</h3>
+              <p className="text-muted-foreground mb-4 text-center max-w-md">
+                Upload your first document to start organizing proposals, templates, and project files.
+              </p>
+              <Button asChild>
+                <Link href="/portal/documents/upload">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Document
+                </Link>
+              </Button>
             </CardContent>
           </Card>
         </div>

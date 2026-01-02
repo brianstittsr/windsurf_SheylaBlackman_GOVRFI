@@ -4,6 +4,7 @@ import { PortalHeader } from "@/components/portal/portal-header";
 import { UserProfileProvider } from "@/contexts/user-profile-context";
 import { ProfileCompletionWizard } from "@/components/portal/profile-completion-wizard";
 import { AffiliateOnboardingWizard } from "@/components/portal/affiliate-onboarding-wizard";
+import { RoleSwitcher } from "@/components/portal/role-switcher";
 
 export default function PortalLayout({
   children,
@@ -21,6 +22,7 @@ export default function PortalLayout({
       </SidebarProvider>
       <ProfileCompletionWizard />
       <AffiliateOnboardingWizard />
+      <RoleSwitcher />
     </UserProfileProvider>
   );
 }

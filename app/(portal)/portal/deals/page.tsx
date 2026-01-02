@@ -75,84 +75,8 @@ const commissionTiers = [
   { level: "co-sell", name: "Co-Sell & Close", rate: 17, description: "Support sales process" },
 ];
 
-// Mock deals data
-const mockDeals = [
-  {
-    id: "1",
-    companyName: "Precision Manufacturing Co.",
-    contactName: "John Smith",
-    contactEmail: "john@precisionmfg.com",
-    stage: "proposal",
-    value: 45000,
-    commissionTier: "assist",
-    referredBy: "Sarah Chen",
-    referredByType: "affiliate",
-    createdAt: "2024-11-15",
-    lastActivity: "2024-12-05",
-    notes: "Interested in ISO 9001 certification and lean manufacturing consulting.",
-    services: ["ISO 9001", "Lean Manufacturing"],
-  },
-  {
-    id: "2",
-    companyName: "TechParts Industries",
-    contactName: "Maria Garcia",
-    contactEmail: "maria@techparts.com",
-    stage: "negotiation",
-    value: 85000,
-    commissionTier: "co-sell",
-    referredBy: "You",
-    referredByType: "self",
-    createdAt: "2024-10-20",
-    lastActivity: "2024-12-08",
-    notes: "Large digital transformation project. Multiple phases planned.",
-    services: ["Digital Twins", "AI Implementation", "Industry 4.0"],
-  },
-  {
-    id: "3",
-    companyName: "Midwest Metals LLC",
-    contactName: "Robert Johnson",
-    contactEmail: "rjohnson@midwestmetals.com",
-    stage: "closed-won",
-    value: 32000,
-    commissionTier: "referral",
-    referredBy: "Michael Rodriguez",
-    referredByType: "affiliate",
-    createdAt: "2024-09-10",
-    lastActivity: "2024-11-28",
-    notes: "IATF 16949 certification completed successfully.",
-    services: ["IATF 16949"],
-  },
-  {
-    id: "4",
-    companyName: "Global Components Inc.",
-    contactName: "Lisa Wang",
-    contactEmail: "lwang@globalcomp.com",
-    stage: "qualified",
-    value: 120000,
-    commissionTier: "assist",
-    referredBy: "You",
-    referredByType: "self",
-    createdAt: "2024-12-01",
-    lastActivity: "2024-12-07",
-    notes: "Reshoring project from China. Complex supply chain restructuring.",
-    services: ["Reshoring", "Supply Chain", "Quality Management"],
-  },
-  {
-    id: "5",
-    companyName: "AutoParts Express",
-    contactName: "David Thompson",
-    contactEmail: "dthompson@autoparts.com",
-    stage: "closed-lost",
-    value: 28000,
-    commissionTier: "referral",
-    referredBy: "Jennifer Park",
-    referredByType: "affiliate",
-    createdAt: "2024-08-15",
-    lastActivity: "2024-10-20",
-    notes: "Lost to competitor. Budget constraints cited.",
-    services: ["Automation"],
-  },
-];
+// Deals will be loaded from Firebase
+const mockDeals: any[] = [];
 
 export default function DealsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -169,35 +93,12 @@ export default function DealsPage() {
     notes: "",
   });
 
-  const filteredDeals = mockDeals.filter((deal) => {
-    const matchesSearch =
-      deal.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      deal.contactName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStage = !stageFilter || deal.stage === stageFilter;
-    return matchesSearch && matchesStage;
-  });
+  const filteredDeals = mockDeals;
 
-  const totalPipelineValue = mockDeals
-    .filter((d) => !["closed-won", "closed-lost"].includes(d.stage))
-    .reduce((sum, d) => sum + d.value, 0);
-
-  const totalWonValue = mockDeals
-    .filter((d) => d.stage === "closed-won")
-    .reduce((sum, d) => sum + d.value, 0);
-
-  const totalCommissionEarned = mockDeals
-    .filter((d) => d.stage === "closed-won")
-    .reduce((sum, d) => {
-      const tier = commissionTiers.find((t) => t.level === d.commissionTier);
-      return sum + (d.value * (tier?.rate || 0)) / 100;
-    }, 0);
-
-  const potentialCommission = mockDeals
-    .filter((d) => !["closed-won", "closed-lost"].includes(d.stage))
-    .reduce((sum, d) => {
-      const tier = commissionTiers.find((t) => t.level === d.commissionTier);
-      return sum + (d.value * (tier?.rate || 0)) / 100;
-    }, 0);
+  const totalPipelineValue = 0;
+  const totalWonValue = 0;
+  const totalCommissionEarned = 0;
+  const potentialCommission = 0;
 
   const getStageInfo = (stageId: string) => {
     return dealStages.find((s) => s.id === stageId) || dealStages[0];
@@ -354,97 +255,18 @@ export default function DealsPage() {
         </Select>
       </div>
 
-      {/* Deals Table */}
+      {/* Empty State */}
       <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Company</TableHead>
-                <TableHead>Stage</TableHead>
-                <TableHead>Value</TableHead>
-                <TableHead>Commission</TableHead>
-                <TableHead>Referred By</TableHead>
-                <TableHead>Last Activity</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredDeals.map((deal) => {
-                const stage = getStageInfo(deal.stage);
-                const tier = getCommissionTier(deal.commissionTier);
-                const commission = (deal.value * tier.rate) / 100;
-
-                return (
-                  <TableRow key={deal.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{deal.companyName}</p>
-                        <p className="text-sm text-muted-foreground">{deal.contactName}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className={cn("text-white", stage.color)}
-                      >
-                        {stage.name}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {formatCurrency(deal.value)}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium text-primary">
-                          {formatCurrency(commission)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {tier.rate}% - {tier.name}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback className="text-xs">
-                            {deal.referredBy.split(" ").map((n) => n[0]).join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">{deal.referredBy}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(deal.lastActivity).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setSelectedDeal(deal)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <DollarSign className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium mb-2">No deals yet</h3>
+          <p className="text-muted-foreground mb-4 text-center max-w-md">
+            Create your first referral to start tracking deals and commissions with affiliates.
+          </p>
+          <Button onClick={() => setIsNewDealOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Referral
+          </Button>
         </CardContent>
       </Card>
 
@@ -607,7 +429,7 @@ export default function DealsPage() {
                 <div>
                   <Label className="text-muted-foreground">Services</Label>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {selectedDeal.services.map((service) => (
+                    {selectedDeal.services.map((service: string) => (
                       <Badge key={service} variant="outline">
                         {service}
                       </Badge>

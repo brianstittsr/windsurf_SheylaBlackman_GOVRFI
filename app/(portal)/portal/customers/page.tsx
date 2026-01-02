@@ -38,88 +38,8 @@ export const metadata: Metadata = {
   description: "Manage customer relationships and engagements",
 };
 
-const customers = [
-  {
-    id: "1",
-    name: "ABC Manufacturing Inc.",
-    industry: "Automotive",
-    size: "100-250",
-    location: "Detroit, MI",
-    status: "active",
-    projects: 2,
-    contacts: [
-      { name: "Tom Wilson", role: "VP Operations", initials: "TW" },
-      { name: "Lisa Chen", role: "Quality Manager", initials: "LC" },
-    ],
-    lastActivity: "2 days ago",
-  },
-  {
-    id: "2",
-    name: "XYZ Industries",
-    industry: "Aerospace",
-    size: "250-500",
-    location: "Cleveland, OH",
-    status: "active",
-    projects: 1,
-    contacts: [
-      { name: "Mark Johnson", role: "CEO", initials: "MJ" },
-    ],
-    lastActivity: "Today",
-  },
-  {
-    id: "3",
-    name: "123 Components LLC",
-    industry: "Electronics",
-    size: "25-100",
-    location: "Chicago, IL",
-    status: "active",
-    projects: 1,
-    contacts: [
-      { name: "Sarah Miller", role: "Plant Manager", initials: "SM" },
-    ],
-    lastActivity: "1 week ago",
-  },
-  {
-    id: "4",
-    name: "Precision Parts Co",
-    industry: "Industrial Equipment",
-    size: "100-250",
-    location: "Indianapolis, IN",
-    status: "prospect",
-    projects: 0,
-    contacts: [
-      { name: "David Brown", role: "President", initials: "DB" },
-    ],
-    lastActivity: "5 days ago",
-  },
-  {
-    id: "5",
-    name: "TechForm Industries",
-    industry: "Medical Devices",
-    size: "250-500",
-    location: "Minneapolis, MN",
-    status: "prospect",
-    projects: 0,
-    contacts: [
-      { name: "Jennifer Lee", role: "COO", initials: "JL" },
-      { name: "Robert Kim", role: "Engineering Director", initials: "RK" },
-    ],
-    lastActivity: "1 week ago",
-  },
-  {
-    id: "6",
-    name: "Metro Components",
-    industry: "Automotive",
-    size: "100-250",
-    location: "Columbus, OH",
-    status: "completed",
-    projects: 1,
-    contacts: [
-      { name: "Mike Davis", role: "Operations Manager", initials: "MD" },
-    ],
-    lastActivity: "2 weeks ago",
-  },
-];
+// Customers will be loaded from Firebase
+const customers: any[] = [];
 
 function getStatusBadge(status: string) {
   switch (status) {
@@ -135,9 +55,9 @@ function getStatusBadge(status: string) {
 }
 
 export default function CustomersPage() {
-  const activeCustomers = customers.filter((c) => c.status === "active").length;
-  const prospects = customers.filter((c) => c.status === "prospect").length;
-  const totalProjects = customers.reduce((sum, c) => sum + c.projects, 0);
+  const activeCustomers = 0;
+  const prospects = 0;
+  const totalProjects = 0;
 
   return (
     <div className="space-y-6">
@@ -203,105 +123,20 @@ export default function CustomersPage() {
         </CardContent>
       </Card>
 
-      {/* Customers Table */}
+      {/* Empty State */}
       <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Company</TableHead>
-                <TableHead>Industry</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Projects</TableHead>
-                <TableHead>Contacts</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {customers.map((customer) => (
-                <TableRow key={customer.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Building className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <Link
-                          href={`/portal/customers/${customer.id}`}
-                          className="font-medium hover:underline"
-                        >
-                          {customer.name}
-                        </Link>
-                        <p className="text-xs text-muted-foreground">
-                          {customer.size} employees
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{customer.industry}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="h-3 w-3" />
-                      {customer.location}
-                    </div>
-                  </TableCell>
-                  <TableCell>{getStatusBadge(customer.status)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <FolderKanban className="h-4 w-4 text-muted-foreground" />
-                      {customer.projects}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex -space-x-2">
-                      {customer.contacts.slice(0, 3).map((contact, i) => (
-                        <Avatar key={i} className="h-7 w-7 border-2 border-background">
-                          <AvatarFallback className="bg-secondary/20 text-secondary text-xs">
-                            {contact.initials}
-                          </AvatarFallback>
-                        </Avatar>
-                      ))}
-                      {customer.contacts.length > 3 && (
-                        <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs border-2 border-background">
-                          +{customer.contacts.length - 3}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/portal/customers/${customer.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/portal/customers/${customer.id}/edit`}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Mail className="mr-2 h-4 w-4" />
-                          Send Email
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <Building className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium mb-2">No customers yet</h3>
+          <p className="text-muted-foreground mb-4 text-center max-w-md">
+            Add your first customer to start tracking relationships and engagements.
+          </p>
+          <Button asChild>
+            <Link href="/portal/customers/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Customer
+            </Link>
+          </Button>
         </CardContent>
       </Card>
     </div>

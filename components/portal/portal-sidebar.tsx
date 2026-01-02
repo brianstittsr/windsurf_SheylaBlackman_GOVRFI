@@ -7,7 +7,9 @@ import { usePathname } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { COLLECTIONS } from "@/lib/schema";
-import { useUserProfile } from "@/contexts/user-profile-context";
+import { useUserProfile, ViewableRole } from "@/contexts/user-profile-context";
+import { useFeatureVisibility } from "@/lib/feature-visibility";
+import { ROLE_LABELS } from "@/lib/role-permissions";
 import {
   Sidebar,
   SidebarContent,
@@ -72,8 +74,19 @@ import {
   Heart,
   Phone,
   CalendarClock,
+  Eye,
+  EyeOff,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const mainNavItems = [
   {
@@ -128,6 +141,12 @@ const workItems = [
         icon: Settings,
       },
     ],
+  },
+  {
+    title: "FPDS Search",
+    href: "/fpds-search",
+    icon: Search,
+    badge: "GOV",
   },
   {
     title: "Apollo Search",
@@ -288,10 +307,35 @@ const aiItems = [
   },
 ];
 
+// Available roles for the role switcher
+const VIEWABLE_ROLES: ViewableRole[] = [
+  "superadmin",
+  "admin",
+  "team_member",
+  "affiliate",
+  "customer",
+  "viewer",
+];
+
 export function PortalSidebar() {
   const pathname = usePathname();
-  const { getDisplayName, getInitials, profile, isAdmin, signOut } = useUserProfile();
+  const { 
+    getDisplayName, 
+    getInitials, 
+    profile, 
+    isAdmin, 
+    isSuperAdmin, 
+    signOut, 
+    getEffectiveRole, 
+    isViewingAsOtherRole,
+    viewAsRole,
+    setViewAsRole,
+  } = useUserProfile();
   const [bookCallLeadsCount, setBookCallLeadsCount] = useState(0);
+  
+  // Get effective role for feature visibility
+  const effectiveRole = getEffectiveRole();
+  const { isFeatureVisible, loading: featureVisibilityLoading } = useFeatureVisibility(effectiveRole);
 
   // Subscribe to BookCallLeads count (new leads only)
   useEffect(() => {
@@ -350,7 +394,9 @@ export function PortalSidebar() {
             <CollapsibleContent>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {mainNavItems.map((item) => (
+                  {mainNavItems
+                    .filter((item) => isFeatureVisible(item.title))
+                    .map((item) => (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
                         asChild
@@ -390,7 +436,13 @@ export function PortalSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu>
                   {workItems
-                    .filter((item) => !item.adminOnly || isAdmin())
+                    .filter((item) => {
+                      // First check feature visibility
+                      if (!isFeatureVisible(item.title)) return false;
+                      // Then check admin-only items
+                      const effectiveIsAdmin = effectiveRole === "admin" || effectiveRole === "superadmin";
+                      return !item.adminOnly || effectiveIsAdmin;
+                    })
                     .map((item) => (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
@@ -427,7 +479,9 @@ export function PortalSidebar() {
             <CollapsibleContent>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {aiItems.map((item) => (
+                  {aiItems
+                    .filter((item) => isFeatureVisible(item.title))
+                    .map((item) => (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
                         asChild
@@ -447,8 +501,8 @@ export function PortalSidebar() {
           </SidebarGroup>
         </Collapsible>
 
-        {/* Admin - Only show for admin users */}
-        {isAdmin() && (
+        {/* Admin - Only show for admin users (respects role switching) */}
+        {(effectiveRole === "admin" || effectiveRole === "superadmin") && (
         <Collapsible open={openSections.admin} onOpenChange={() => toggleSection("admin")}>
           <SidebarGroup>
             <CollapsibleTrigger asChild>
@@ -519,7 +573,9 @@ export function PortalSidebar() {
             <CollapsibleContent>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {initiativeItems.map((item) => (
+                  {initiativeItems
+                    .filter((item) => isFeatureVisible(item.title))
+                    .map((item) => (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
                         asChild
@@ -541,6 +597,54 @@ export function PortalSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
+        {/* Role Switcher - Only visible to SuperAdmin */}
+        {isSuperAdmin() && (
+          <div className="px-3 py-2 border-b border-sidebar-border">
+            <div className="flex items-center gap-2 mb-2">
+              <Eye className="h-4 w-4 text-sidebar-foreground/60" />
+              <span className="text-xs font-medium text-sidebar-foreground/60">View As Role</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select
+                value={viewAsRole || "superadmin"}
+                onValueChange={(value) => {
+                  if (value === "superadmin") {
+                    setViewAsRole(null);
+                  } else {
+                    setViewAsRole(value as ViewableRole);
+                  }
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VIEWABLE_ROLES.map((role) => (
+                    <SelectItem key={role} value={role} className="text-xs">
+                      {ROLE_LABELS[role]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isViewingAsOtherRole && (
+                <button
+                  onClick={() => setViewAsRole(null)}
+                  className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/60 hover:text-sidebar-foreground"
+                  title="Reset to SuperAdmin"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            {isViewingAsOtherRole && (
+              <Badge variant="outline" className="mt-2 w-full justify-center text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                <EyeOff className="h-3 w-3 mr-1" />
+                Viewing as {ROLE_LABELS[viewAsRole!]}
+              </Badge>
+            )}
+          </div>
+        )}
+        
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -553,7 +657,13 @@ export function PortalSidebar() {
                   </Avatar>
                   <div className="flex flex-col items-start text-sm">
                     <span className="font-medium">{getDisplayName()}</span>
-                    <span className="text-xs text-sidebar-foreground/60 capitalize">{profile.role.replace("_", " ")}</span>
+                    <span className="text-xs text-sidebar-foreground/60 capitalize">
+                      {isViewingAsOtherRole ? (
+                        <span className="text-amber-600">Viewing as {ROLE_LABELS[viewAsRole!]}</span>
+                      ) : (
+                        profile.role.replace("_", " ")
+                      )}
+                    </span>
                   </div>
                   <ChevronUp className="ml-auto h-4 w-4" />
                 </SidebarMenuButton>

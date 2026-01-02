@@ -22,117 +22,10 @@ export const metadata: Metadata = {
   description: "View and manage meetings with AI-extracted insights",
 };
 
-const upcomingMeetings = [
-  {
-    id: "1",
-    title: "ABC Manufacturing Discovery Call",
-    date: "2025-01-07",
-    time: "10:00 AM",
-    duration: "30 min",
-    type: "discovery",
-    attendees: [
-      { name: "John Doe", initials: "JD" },
-      { name: "Client Rep", initials: "CR" },
-    ],
-    opportunity: "ABC Manufacturing",
-    joinUrl: "#",
-  },
-  {
-    id: "2",
-    title: "Weekly Affiliate Sync",
-    date: "2025-01-07",
-    time: "2:00 PM",
-    duration: "45 min",
-    type: "internal",
-    attendees: [
-      { name: "John Doe", initials: "JD" },
-      { name: "Sarah W.", initials: "SW" },
-      { name: "Mike R.", initials: "MR" },
-    ],
-    joinUrl: "#",
-  },
-  {
-    id: "3",
-    title: "XYZ Industries Follow-up",
-    date: "2025-01-07",
-    time: "4:00 PM",
-    duration: "30 min",
-    type: "follow-up",
-    attendees: [
-      { name: "Sarah W.", initials: "SW" },
-      { name: "Client Rep", initials: "CR" },
-    ],
-    opportunity: "XYZ Industries Expansion",
-    joinUrl: "#",
-  },
-  {
-    id: "4",
-    title: "Precision Parts Project Review",
-    date: "2025-01-08",
-    time: "11:00 AM",
-    duration: "1 hour",
-    type: "project",
-    attendees: [
-      { name: "John Doe", initials: "JD" },
-      { name: "Jane D.", initials: "JD" },
-    ],
-    project: "Precision Parts Supplier Qualification",
-    joinUrl: "#",
-  },
-];
+// Meetings will be loaded from Firebase/Calendar integration
+const upcomingMeetings: any[] = [];
 
-const pastMeetings = [
-  {
-    id: "p1",
-    title: "TechForm Industries Initial Call",
-    date: "2025-01-03",
-    time: "2:00 PM",
-    duration: "45 min",
-    type: "discovery",
-    attendees: [
-      { name: "Sarah W.", initials: "SW" },
-      { name: "Client Rep", initials: "CR" },
-    ],
-    hasTranscript: true,
-    hasNotes: true,
-    actionItems: 4,
-    keyDecisions: 2,
-  },
-  {
-    id: "p2",
-    title: "Q4 Review & Q1 Planning",
-    date: "2025-01-02",
-    time: "10:00 AM",
-    duration: "2 hours",
-    type: "internal",
-    attendees: [
-      { name: "John Doe", initials: "JD" },
-      { name: "Sarah W.", initials: "SW" },
-      { name: "Mike R.", initials: "MR" },
-      { name: "Jane D.", initials: "JD" },
-    ],
-    hasTranscript: true,
-    hasNotes: true,
-    actionItems: 12,
-    keyDecisions: 5,
-  },
-  {
-    id: "p3",
-    title: "123 Components ISO Kickoff",
-    date: "2024-12-20",
-    time: "9:00 AM",
-    duration: "1 hour",
-    type: "project",
-    attendees: [
-      { name: "Jane D.", initials: "JD" },
-      { name: "Client Rep", initials: "CR" },
-    ],
-    hasTranscript: true,
-    hasNotes: true,
-    actionItems: 8,
-    keyDecisions: 3,
-  },
-];
+const pastMeetings: any[] = [];
 
 function getMeetingTypeBadge(type: string) {
   const types: Record<string, { label: string; className: string }> = {
@@ -187,154 +80,34 @@ export default function MeetingsPage() {
 
         {/* Upcoming Meetings */}
         <TabsContent value="upcoming" className="space-y-4 mt-6">
-          {upcomingMeetings.map((meeting) => (
-            <Card key={meeting.id}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center shrink-0">
-                      <Video className="h-6 w-6 text-secondary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-lg">{meeting.title}</h3>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {formatDate(meeting.date)}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {meeting.time} ({meeting.duration})
-                        </div>
-                      </div>
-                      {(meeting.opportunity || meeting.project) && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {meeting.opportunity && `Opportunity: ${meeting.opportunity}`}
-                          {meeting.project && `Project: ${meeting.project}`}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    {getMeetingTypeBadge(meeting.type)}
-                    <Button asChild>
-                      <Link href={meeting.joinUrl}>
-                        <Play className="mr-2 h-4 w-4" />
-                        Join
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Attendees */}
-                <div className="mt-4 pt-4 border-t flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Attendees:</span>
-                    <div className="flex -space-x-2">
-                      {meeting.attendees.map((attendee, i) => (
-                        <Avatar key={i} className="h-6 w-6 border-2 border-background">
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                            {attendee.initials}
-                          </AvatarFallback>
-                        </Avatar>
-                      ))}
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Add to Calendar
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Video className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">No upcoming meetings</h3>
+              <p className="text-muted-foreground mb-4 text-center max-w-md">
+                Schedule your first meeting to start tracking appointments and AI-extracted insights.
+              </p>
+              <Button asChild>
+                <Link href="/portal/meetings/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Schedule Meeting
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Past Meetings */}
         <TabsContent value="past" className="space-y-4 mt-6">
-          {pastMeetings.map((meeting) => (
-            <Card key={meeting.id}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                      <Video className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-lg">{meeting.title}</h3>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {new Date(meeting.date).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {meeting.time} ({meeting.duration})
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {getMeetingTypeBadge(meeting.type)}
-                </div>
-
-                {/* Meeting Intelligence */}
-                <div className="mt-4 pt-4 border-t">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {meeting.hasTranscript && (
-                      <Button variant="outline" size="sm" className="justify-start" asChild>
-                        <Link href={`/portal/meetings/${meeting.id}/transcript`}>
-                          <FileText className="mr-2 h-4 w-4" />
-                          Transcript
-                        </Link>
-                      </Button>
-                    )}
-                    {meeting.hasNotes && (
-                      <Button variant="outline" size="sm" className="justify-start" asChild>
-                        <Link href={`/portal/meetings/${meeting.id}/notes`}>
-                          <FileText className="mr-2 h-4 w-4" />
-                          Notes
-                        </Link>
-                      </Button>
-                    )}
-                    <Button variant="outline" size="sm" className="justify-start" asChild>
-                      <Link href={`/portal/meetings/${meeting.id}/actions`}>
-                        <CheckSquare className="mr-2 h-4 w-4" />
-                        {meeting.actionItems} Action Items
-                      </Link>
-                    </Button>
-                    <Button variant="outline" size="sm" className="justify-start" asChild>
-                      <Link href={`/portal/meetings/${meeting.id}`}>
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        View Details
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Attendees */}
-                <div className="mt-4 flex items-center gap-2">
-                  <div className="flex -space-x-2">
-                    {meeting.attendees.map((attendee, i) => (
-                      <Avatar key={i} className="h-6 w-6 border-2 border-background">
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                          {attendee.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                    ))}
-                  </div>
-                  <span className="text-sm text-muted-foreground">
-                    {meeting.attendees.length} attendees
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">No past meetings</h3>
+              <p className="text-muted-foreground mb-4 text-center max-w-md">
+                Past meetings with transcripts and AI-extracted insights will appear here.
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

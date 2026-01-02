@@ -87,53 +87,8 @@ interface Comment {
   createdAt: Date;
 }
 
-// Mock data
-const initialItems: TrackerItem[] = [
-  {
-    id: "1",
-    type: "bug",
-    title: "Avatar images returning 404 errors",
-    description: "Multiple avatar images are missing from the /avatars/ directory causing 404 errors in the console.",
-    status: "resolved",
-    priority: "medium",
-    page: "/portal/command-center",
-    reporter: "System",
-    assignee: "Dev Team",
-    tags: ["ui", "images"],
-    comments: [
-      { id: "c1", author: "Dev Team", content: "Fixed by using initials fallback instead of images", createdAt: new Date("2024-12-14") }
-    ],
-    createdAt: new Date("2024-12-14"),
-    updatedAt: new Date("2024-12-14"),
-  },
-  {
-    id: "2",
-    type: "idea",
-    title: "Add retargeting pixel integration",
-    description: "Implement Meta Pixel and LinkedIn Insight Tag for retargeting website visitors about upcoming events and workshops.",
-    status: "open",
-    priority: "medium",
-    reporter: "Brian",
-    tags: ["marketing", "analytics", "events"],
-    comments: [],
-    createdAt: new Date("2024-12-14"),
-    updatedAt: new Date("2024-12-14"),
-  },
-  {
-    id: "3",
-    type: "improvement",
-    title: "Enhance sign-in page with SSO options",
-    description: "Add more SSO providers beyond Microsoft, such as Google Workspace for manufacturing companies that use it.",
-    status: "open",
-    priority: "low",
-    page: "/sign-in",
-    reporter: "Brian",
-    tags: ["auth", "ux"],
-    comments: [],
-    createdAt: new Date("2024-12-14"),
-    updatedAt: new Date("2024-12-14"),
-  },
-];
+// Items will be stored in localStorage
+const initialItems: TrackerItem[] = [];
 
 // Page options for the dropdown
 const pageOptions = [

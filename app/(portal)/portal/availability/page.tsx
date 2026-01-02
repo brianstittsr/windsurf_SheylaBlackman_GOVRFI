@@ -82,61 +82,11 @@ const DAYS_OF_WEEK = [
   { key: "saturday", label: "Saturday", short: "Sat" },
 ] as const;
 
-// Sample meeting types
-const sampleMeetingTypes: MeetingType[] = [
-  {
-    id: "1",
-    name: "Discovery/Scoping Session",
-    description: "60-minute complimentary session to explore your goals and specific V+ solutions",
-    duration: 60,
-    color: "#C8A951",
-    bufferBefore: 0,
-    bufferAfter: 15,
-    isActive: true,
-    requiresApproval: false,
-  },
-  {
-    id: "2",
-    name: "Quick Consultation",
-    description: "30-minute focused discussion on a specific topic",
-    duration: 30,
-    color: "#3b82f6",
-    bufferBefore: 0,
-    bufferAfter: 10,
-    isActive: true,
-    requiresApproval: false,
-  },
-  {
-    id: "3",
-    name: "Strategy Session",
-    description: "90-minute deep dive into strategic planning",
-    duration: 90,
-    color: "#8b5cf6",
-    bufferBefore: 15,
-    bufferAfter: 15,
-    isActive: false,
-    requiresApproval: true,
-  },
-];
+// Meeting types will be loaded from Firebase
+const sampleMeetingTypes: MeetingType[] = [];
 
-// Sample bookings
-const sampleBookings: Booking[] = [
-  {
-    id: "b1",
-    meetingTypeId: "1",
-    meetingTypeName: "Discovery/Scoping Session",
-    ownerId: "owner1",
-    ownerName: "Brian Stitt",
-    guestName: "John Smith",
-    guestEmail: "john@example.com",
-    date: new Date().toISOString().split("T")[0],
-    startTime: "10:00",
-    endTime: "11:00",
-    timezone: "America/New_York",
-    status: "confirmed",
-    createdAt: new Date().toISOString(),
-  },
-];
+// Bookings will be loaded from Firebase
+const sampleBookings: Booking[] = [];
 
 export default function AvailabilityPage() {
   const [timezone, setTimezone] = useState("America/New_York");
