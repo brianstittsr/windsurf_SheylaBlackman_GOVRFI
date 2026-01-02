@@ -2,9 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { onAuthStateChanged, signOut as firebaseSignOut, User as FirebaseUser } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { doc, updateDoc, Timestamp } from "firebase/firestore";
 import { getTeamMemberByAuthUid, findAndLinkTeamMember } from "@/lib/auth-team-member-link";
-import type { TeamMemberDoc } from "@/lib/schema";
+import { COLLECTIONS, type TeamMemberDoc } from "@/lib/schema";
 
 // User profile fields
 export interface UserProfile {
@@ -157,7 +158,7 @@ export type ViewableRole = "superadmin" | "admin" | "affiliate" | "viewer" | "cu
 interface UserProfileContextType {
   profile: UserProfile;
   setProfile: (profile: UserProfile) => void;
-  updateProfile: (updates: Partial<UserProfile>) => void;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   profileCompletion: number;
   networkingCompletion: number;
   isComplete: boolean;
@@ -276,12 +277,56 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     }
   }, [isLoading, isAuthenticated, isComplete, needsOnboarding]);
 
-  const updateProfile = (updates: Partial<UserProfile>) => {
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    // Update local state immediately
     setProfile((prev) => ({
       ...prev,
       ...updates,
       updatedAt: new Date().toISOString(),
     }));
+
+    // Persist to Firestore if we have a linked team member
+    if (linkedTeamMember && db) {
+      try {
+        const teamMemberRef = doc(db, COLLECTIONS.TEAM_MEMBERS, linkedTeamMember.id);
+        
+        // Map UserProfile fields back to TeamMemberDoc fields
+        const teamMemberUpdates: Record<string, unknown> = {
+          updatedAt: Timestamp.now(),
+        };
+        
+        if (updates.firstName !== undefined) teamMemberUpdates.firstName = updates.firstName;
+        if (updates.lastName !== undefined) teamMemberUpdates.lastName = updates.lastName;
+        if (updates.email !== undefined) teamMemberUpdates.emailPrimary = updates.email;
+        if (updates.phone !== undefined) teamMemberUpdates.mobile = updates.phone;
+        if (updates.company !== undefined) teamMemberUpdates.company = updates.company;
+        if (updates.jobTitle !== undefined) teamMemberUpdates.title = updates.jobTitle;
+        if (updates.location !== undefined) teamMemberUpdates.location = updates.location;
+        if (updates.bio !== undefined) teamMemberUpdates.bio = updates.bio;
+        if (updates.avatarUrl !== undefined) teamMemberUpdates.avatar = updates.avatarUrl;
+        
+        await updateDoc(teamMemberRef, teamMemberUpdates);
+        
+        // Update the linkedTeamMember state to reflect changes
+        setLinkedTeamMember((prev) => prev ? {
+          ...prev,
+          firstName: updates.firstName ?? prev.firstName,
+          lastName: updates.lastName ?? prev.lastName,
+          emailPrimary: updates.email ?? prev.emailPrimary,
+          mobile: updates.phone ?? prev.mobile,
+          company: updates.company ?? prev.company,
+          title: updates.jobTitle ?? prev.title,
+          location: updates.location ?? prev.location,
+          bio: updates.bio ?? prev.bio,
+          avatar: updates.avatarUrl ?? prev.avatar,
+          updatedAt: Timestamp.now(),
+        } : null);
+        
+        console.log("Profile updated in Firestore for team member:", linkedTeamMember.id);
+      } catch (error) {
+        console.error("Error updating team member profile in Firestore:", error);
+      }
+    }
   };
 
   const getDisplayName = () => {

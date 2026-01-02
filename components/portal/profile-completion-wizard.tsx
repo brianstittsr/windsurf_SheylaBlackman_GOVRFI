@@ -77,6 +77,7 @@ const steps = [
 export function ProfileCompletionWizard() {
   const { profile, updateProfile, profileCompletion, showProfileWizard, setShowProfileWizard } = useUserProfile();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     firstName: profile.firstName || "",
     lastName: profile.lastName || "",
@@ -104,18 +105,32 @@ export function ProfileCompletionWizard() {
     }
   };
 
-  const handleComplete = () => {
-    updateProfile({
-      ...formData,
-      profileCompletedAt: new Date().toISOString(),
-    });
-    setShowProfileWizard(false);
+  const handleComplete = async () => {
+    setIsSaving(true);
+    try {
+      await updateProfile({
+        ...formData,
+        profileCompletedAt: new Date().toISOString(),
+      });
+      setShowProfileWizard(false);
+    } catch (error) {
+      console.error("Error saving profile:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     // Save what we have so far
-    updateProfile(formData);
-    setShowProfileWizard(false);
+    setIsSaving(true);
+    try {
+      await updateProfile(formData);
+      setShowProfileWizard(false);
+    } catch (error) {
+      console.error("Error saving profile:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const isStepValid = () => {
@@ -309,8 +324,8 @@ export function ProfileCompletionWizard() {
         </div>
 
         <DialogFooter className="flex items-center justify-between">
-          <Button variant="ghost" onClick={handleSkip}>
-            Skip for now
+          <Button variant="ghost" onClick={handleSkip} disabled={isSaving}>
+            {isSaving ? "Saving..." : "Skip for now"}
           </Button>
           <div className="flex gap-2">
             {currentStep > 1 && (
@@ -325,9 +340,9 @@ export function ProfileCompletionWizard() {
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
-              <Button onClick={handleComplete} disabled={!isStepValid()}>
+              <Button onClick={handleComplete} disabled={!isStepValid() || isSaving}>
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Complete Profile
+                {isSaving ? "Saving..." : "Complete Profile"}
               </Button>
             )}
           </div>
