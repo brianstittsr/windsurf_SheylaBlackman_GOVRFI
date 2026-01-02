@@ -195,7 +195,7 @@ export function getDefaultRoleSettings(role: string): Record<string, boolean> {
  * Hook to get and manage feature visibility for a specific role
  */
 export function useFeatureVisibility(role: string) {
-  const [settings, setSettings] = useState<Record<string, boolean>>({});
+  const [settings, setSettings] = useState<Record<string, boolean>>(() => getDefaultRoleSettings(role || "viewer"));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -206,31 +206,69 @@ export function useFeatureVisibility(role: string) {
       return;
     }
 
-    // Listen to Firestore for real-time updates
-    const unsubscribe = onSnapshot(
-      doc(db, PLATFORM_SETTINGS_COLLECTION, FEATURE_VISIBILITY_DOC),
-      (snapshot) => {
-        try {
-          const data = snapshot.data() as FeatureVisibilityByRole | undefined;
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
+
+    // Capture db reference for closure (we've already checked it's not null above)
+    const firestore = db;
+
+    // Try to fetch once first to check permissions
+    const fetchSettings = async () => {
+      try {
+        const snapshot = await getDoc(doc(firestore, PLATFORM_SETTINGS_COLLECTION, FEATURE_VISIBILITY_DOC));
+        if (cancelled) return;
+        
+        if (snapshot.exists()) {
+          const data = snapshot.data() as FeatureVisibilityByRole;
           const roleSettings = data?.[role] || getDefaultRoleSettings(role);
           setSettings(roleSettings);
           setError(null);
-        } catch (err) {
-          console.error("Error parsing feature visibility:", err);
+          
+          // Only set up real-time listener if initial fetch succeeded
+          unsubscribe = onSnapshot(
+            doc(firestore, PLATFORM_SETTINGS_COLLECTION, FEATURE_VISIBILITY_DOC),
+            (snap) => {
+              if (cancelled) return;
+              try {
+                const snapData = snap.data() as FeatureVisibilityByRole | undefined;
+                const rs = snapData?.[role] || getDefaultRoleSettings(role);
+                setSettings(rs);
+                setError(null);
+              } catch (err) {
+                console.error("Error parsing feature visibility:", err);
+              }
+            },
+            (err) => {
+              // Silently fall back to defaults on listener error
+              console.warn("Feature visibility listener error, using defaults");
+            }
+          );
+        } else {
+          // Document doesn't exist, use defaults
           setSettings(getDefaultRoleSettings(role));
-          setError("Failed to load feature visibility settings");
         }
-        setLoading(false);
-      },
-      (err) => {
-        console.error("Error listening to feature visibility:", err);
+      } catch (err: any) {
+        if (cancelled) return;
+        // Permission denied or other error - silently use defaults
+        if (err?.code === "permission-denied") {
+          console.warn("Feature visibility: permission denied, using defaults");
+        } else {
+          console.warn("Feature visibility fetch error, using defaults:", err?.message);
+        }
         setSettings(getDefaultRoleSettings(role));
-        setError("Failed to connect to settings");
-        setLoading(false);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    );
+    };
 
-    return () => unsubscribe();
+    fetchSettings();
+
+    return () => {
+      cancelled = true;
+      if (unsubscribe) unsubscribe();
+    };
   }, [role]);
 
   /**
@@ -263,28 +301,59 @@ export function useFeatureVisibilityAdmin() {
       return;
     }
 
-    // Listen to Firestore for real-time updates
-    const unsubscribe = onSnapshot(
-      doc(db, PLATFORM_SETTINGS_COLLECTION, FEATURE_VISIBILITY_DOC),
-      (snapshot) => {
-        try {
-          const data = snapshot.data() as FeatureVisibilityByRole | undefined;
-          setAllSettings(data || {});
-          setError(null);
-        } catch (err) {
-          console.error("Error parsing feature visibility:", err);
+    const firestore = db;
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
+
+    // Try to fetch once first to check permissions
+    const fetchSettings = async () => {
+      try {
+        const snapshot = await getDoc(doc(firestore, PLATFORM_SETTINGS_COLLECTION, FEATURE_VISIBILITY_DOC));
+        if (cancelled) return;
+        
+        const data = snapshot.data() as FeatureVisibilityByRole | undefined;
+        setAllSettings(data || {});
+        setError(null);
+        
+        // Only set up real-time listener if initial fetch succeeded
+        unsubscribe = onSnapshot(
+          doc(firestore, PLATFORM_SETTINGS_COLLECTION, FEATURE_VISIBILITY_DOC),
+          (snap) => {
+            if (cancelled) return;
+            try {
+              const snapData = snap.data() as FeatureVisibilityByRole | undefined;
+              setAllSettings(snapData || {});
+              setError(null);
+            } catch (err) {
+              console.error("Error parsing feature visibility:", err);
+            }
+          },
+          (err) => {
+            console.warn("Feature visibility admin listener error");
+          }
+        );
+      } catch (err: any) {
+        if (cancelled) return;
+        if (err?.code === "permission-denied") {
+          console.warn("Feature visibility admin: permission denied");
+          setError("Permission denied - SuperAdmin access required");
+        } else {
+          console.warn("Feature visibility admin fetch error:", err?.message);
           setError("Failed to load settings");
         }
-        setLoading(false);
-      },
-      (err) => {
-        console.error("Error listening to feature visibility:", err);
-        setError("Failed to connect to settings");
-        setLoading(false);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    );
+    };
 
-    return () => unsubscribe();
+    fetchSettings();
+
+    return () => {
+      cancelled = true;
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   /**
@@ -303,12 +372,13 @@ export function useFeatureVisibilityAdmin() {
       return false;
     }
 
+    const firestore = db;
     setSaving(true);
     setError(null);
 
     try {
       await setDoc(
-        doc(db, PLATFORM_SETTINGS_COLLECTION, FEATURE_VISIBILITY_DOC),
+        doc(firestore, PLATFORM_SETTINGS_COLLECTION, FEATURE_VISIBILITY_DOC),
         { [role]: features },
         { merge: true }
       );
@@ -387,8 +457,9 @@ export function useFeatureVisibilityAdmin() {
 export async function initializeFeatureVisibility(): Promise<void> {
   if (!db) return;
 
+  const firestore = db;
   try {
-    const docRef = doc(db, PLATFORM_SETTINGS_COLLECTION, FEATURE_VISIBILITY_DOC);
+    const docRef = doc(firestore, PLATFORM_SETTINGS_COLLECTION, FEATURE_VISIBILITY_DOC);
     const snapshot = await getDoc(docRef);
 
     if (!snapshot.exists()) {
