@@ -24,7 +24,10 @@ import {
   RefreshCw,
   ExternalLink,
   AlertCircle,
+  Bot,
+  Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 interface DataSource {
@@ -102,6 +105,11 @@ export default function SolicitationConfigPage() {
 
   const [samApiKey, setSamApiKey] = useState("••••••••••••••••");
   const [dcApiKey, setDcApiKey] = useState("");
+  
+  // SAM.gov Agent settings
+  const [samAgentEnabled, setSamAgentEnabled] = useState(false);
+  const [samAgentApiKey, setSamAgentApiKey] = useState("");
+  const [llmProvider, setLlmProvider] = useState("openai");
 
   const handleToggleSource = (id: string) => {
     setDataSources((prev) =>
@@ -246,6 +254,76 @@ export default function SolicitationConfigPage() {
               </Button>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* SAM.gov Agent Configuration */}
+      <Card className="border-primary/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="h-5 w-5 text-primary" />
+            SAM.gov Search Agent
+            <Badge variant="outline" className="ml-2">
+              <Sparkles className="h-3 w-3 mr-1" />
+              AI-Powered
+            </Badge>
+          </CardTitle>
+          <CardDescription>
+            Natural language search for federal contract opportunities using AI
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+            <div>
+              <div className="font-medium">Enable SAM.gov Agent</div>
+              <div className="text-sm text-muted-foreground">
+                Use AI to parse natural language queries and search SAM.gov
+              </div>
+            </div>
+            <Switch
+              checked={samAgentEnabled}
+              onCheckedChange={setSamAgentEnabled}
+            />
+          </div>
+          
+          {samAgentEnabled && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="sam-agent-api-key">SAM.gov API Key (for Agent)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="sam-agent-api-key"
+                    type="password"
+                    value={samAgentApiKey}
+                    onChange={(e) => setSamAgentApiKey(e.target.value)}
+                    placeholder="Enter SAM.gov API key for agent"
+                  />
+                  <Button variant="outline" onClick={() => toast.success("API key saved")}>
+                    Save
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>LLM Provider</Label>
+                <select
+                  className="w-full border rounded-md p-2"
+                  value={llmProvider}
+                  onChange={(e) => setLlmProvider(e.target.value)}
+                >
+                  <option value="openai">OpenAI (GPT-4)</option>
+                  <option value="anthropic">Anthropic (Claude)</option>
+                </select>
+              </div>
+            </>
+          )}
+          
+          <Button variant="outline" className="w-full" asChild>
+            <Link href="/portal/work/solicitations/sam-agent">
+              <Settings className="h-4 w-4 mr-2" />
+              Open SAM.gov Agent Settings
+            </Link>
+          </Button>
         </CardContent>
       </Card>
 

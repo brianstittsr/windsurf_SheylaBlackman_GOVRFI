@@ -28,6 +28,8 @@ import {
   Filter,
   Search,
   Settings,
+  Bot,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -102,6 +104,12 @@ export default function SolicitationDashboardPage() {
             <Link href="/portal/work/solicitations/search">
               <Search className="h-4 w-4 mr-2" />
               Search
+            </Link>
+          </Button>
+          <Button variant="default" asChild>
+            <Link href="/portal/work/solicitations/sam-agent">
+              <Bot className="h-4 w-4 mr-2" />
+              AI Agent
             </Link>
           </Button>
           <Button variant="outline" asChild>
@@ -405,6 +413,13 @@ export default function SolicitationDashboardPage() {
               <Link href="/portal/work/solicitations/search">
                 <Search className="h-4 w-4 mr-2" />
                 Search New Opportunities
+              </Link>
+            </Button>
+            <Button className="w-full justify-start bg-primary/10 text-primary hover:bg-primary/20" asChild>
+              <Link href="/portal/work/solicitations/sam-agent">
+                <Bot className="h-4 w-4 mr-2" />
+                <span className="flex-1 text-left">SAM.gov AI Agent</span>
+                <Sparkles className="h-3 w-3" />
               </Link>
             </Button>
             <Button variant="outline" className="w-full justify-start">
