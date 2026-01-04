@@ -312,7 +312,7 @@ export default function SolicitationDashboardPage() {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      {new Date(award.date).toLocaleDateString()}
+                      {award.date}
                     </div>
                   </TableCell>
                 </TableRow>

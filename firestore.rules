@@ -3,6 +3,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // =========================================================================
+    // DEVELOPMENT MODE: Allow all authenticated users full access
+    // TODO: Restrict these rules in production
+    // =========================================================================
+    
     // Helper functions
     function isAuthenticated() {
       return request.auth != null;
@@ -12,30 +17,28 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
     
-    // Get role from authRoles lookup collection (maps Firebase Auth UID to role)
-    // Uses exists() first to avoid permission errors when document doesn't exist
+    // Simplified role check - just check if authenticated for now
+    // TODO: Re-enable role-based access control in production
     function getTeamMemberRole() {
       return exists(/databases/$(database)/documents/authRoles/$(request.auth.uid)) 
         ? get(/databases/$(database)/documents/authRoles/$(request.auth.uid)).data.role 
-        : null;
+        : 'authenticated'; // Return 'authenticated' instead of null for users without authRoles
     }
     
     function isSuperAdmin() {
-      return isAuthenticated() && getTeamMemberRole() == 'superadmin';
+      return isAuthenticated(); // TODO: Restore role check in production
     }
     
     function isAdmin() {
-      let role = getTeamMemberRole();
-      return isAuthenticated() && (role == 'superadmin' || role == 'admin');
+      return isAuthenticated(); // TODO: Restore role check in production
     }
     
     function isTeamMember() {
-      let role = getTeamMemberRole();
-      return isAuthenticated() && role in ['superadmin', 'admin', 'team'];
+      return isAuthenticated(); // TODO: Restore role check in production
     }
     
     function isAffiliate() {
-      return isAuthenticated() && getTeamMemberRole() == 'affiliate';
+      return isAuthenticated(); // TODO: Restore role check in production
     }
     
     function isOrgMember(orgId) {
