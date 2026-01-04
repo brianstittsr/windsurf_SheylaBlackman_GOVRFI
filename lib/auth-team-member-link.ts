@@ -16,6 +16,8 @@ import {
   doc, 
   Timestamp,
   getDoc,
+  setDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { COLLECTIONS, type TeamMemberDoc } from "./schema";
@@ -77,13 +79,16 @@ export async function findTeamMemberByEmail(email: string): Promise<TeamMemberDo
 
 /**
  * Link a Firebase Auth UID to a Team Member record
+ * Also creates/updates the authRoles lookup document for Firestore security rules
  * @param teamMemberId - The Firestore document ID of the Team Member
  * @param firebaseUid - The Firebase Auth UID to link
+ * @param role - The role of the team member (optional, will be fetched if not provided)
  * @returns true if successful, false otherwise
  */
 export async function linkAuthToTeamMember(
   teamMemberId: string, 
-  firebaseUid: string
+  firebaseUid: string,
+  role?: string
 ): Promise<boolean> {
   if (!db) {
     console.error("Firebase not initialized");
@@ -91,15 +96,88 @@ export async function linkAuthToTeamMember(
   }
 
   try {
+    // Update the team member document with the Firebase UID
     const teamMemberRef = doc(db, COLLECTIONS.TEAM_MEMBERS, teamMemberId);
     await updateDoc(teamMemberRef, {
       firebaseUid: firebaseUid,
       updatedAt: Timestamp.now(),
     });
-    console.log(`Linked Firebase Auth UID ${firebaseUid} to Team Member ${teamMemberId}`);
+    
+    // Get the role if not provided
+    let memberRole = role;
+    if (!memberRole) {
+      const teamMemberDoc = await getDoc(teamMemberRef);
+      if (teamMemberDoc.exists()) {
+        memberRole = teamMemberDoc.data().role || 'viewer';
+      } else {
+        memberRole = 'viewer';
+      }
+    }
+    
+    // Create/update the authRoles lookup document
+    // This is used by Firestore security rules to check user roles
+    const authRoleRef = doc(db, 'authRoles', firebaseUid);
+    await setDoc(authRoleRef, {
+      role: memberRole,
+      teamMemberId: teamMemberId,
+      updatedAt: Timestamp.now(),
+    }, { merge: true });
+    
+    console.log(`Linked Firebase Auth UID ${firebaseUid} to Team Member ${teamMemberId} with role ${memberRole}`);
     return true;
   } catch (error) {
     console.error("Error linking auth to team member:", error);
+    return false;
+  }
+}
+
+/**
+ * Update the authRoles lookup document when a team member's role changes
+ * @param firebaseUid - The Firebase Auth UID
+ * @param newRole - The new role
+ * @returns true if successful, false otherwise
+ */
+export async function updateAuthRole(
+  firebaseUid: string,
+  newRole: string
+): Promise<boolean> {
+  if (!db) {
+    console.error("Firebase not initialized");
+    return false;
+  }
+
+  try {
+    const authRoleRef = doc(db, 'authRoles', firebaseUid);
+    await updateDoc(authRoleRef, {
+      role: newRole,
+      updatedAt: Timestamp.now(),
+    });
+    console.log(`Updated auth role for ${firebaseUid} to ${newRole}`);
+    return true;
+  } catch (error) {
+    console.error("Error updating auth role:", error);
+    return false;
+  }
+}
+
+/**
+ * Remove the authRoles lookup document when unlinking a team member
+ * @param firebaseUid - The Firebase Auth UID
+ * @returns true if successful, false otherwise
+ */
+export async function removeAuthRole(firebaseUid: string): Promise<boolean> {
+  if (!db) {
+    console.error("Firebase not initialized");
+    return false;
+  }
+
+  try {
+    const authRoleRef = doc(db, 'authRoles', firebaseUid);
+    await deleteDoc(authRoleRef);
+    console.log(`Removed auth role for ${firebaseUid}`);
+    return true;
+  } catch (error) {
+    console.error("Error removing auth role:", error);
     return false;
   }
 }
@@ -161,8 +239,8 @@ export async function findAndLinkTeamMember(
     return null;
   }
 
-  // Link the auth account to the Team Member
-  const linked = await linkAuthToTeamMember(teamMember.id, firebaseUid);
+  // Link the auth account to the Team Member (pass the role for authRoles lookup)
+  const linked = await linkAuthToTeamMember(teamMember.id, firebaseUid, teamMember.role);
   if (linked) {
     return { ...teamMember, firebaseUid };
   }

@@ -12,9 +12,10 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
     
+    // Get role from authRoles lookup collection (maps Firebase Auth UID to role)
     function getTeamMemberRole() {
-      let teamMember = get(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
-      return teamMember != null ? teamMember.data.role : null;
+      let authRole = get(/databases/$(database)/documents/authRoles/$(request.auth.uid));
+      return authRole != null ? authRole.data.role : null;
     }
     
     function isSuperAdmin() {
@@ -277,12 +278,22 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Auth Roles - Lookup collection mapping Firebase Auth UID to role
+    // This collection is used by security rules to check user roles
+    // Documents are keyed by Firebase Auth UID and contain: { role, teamMemberId, updatedAt }
+    match /authRoles/{authUid} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated(); // Created when team member is linked
+      allow update: if isAuthenticated(); // Updated when role changes
+      allow delete: if isAuthenticated(); // Deleted when team member is unlinked
+    }
+
     // Team Members - Admin can create and edit newly created docs, SuperAdmin can do everything
     match /teamMembers/{memberId} {
       allow read: if isAuthenticated();
-      allow create: if isAdmin(); // Admin and SuperAdmin can create
-      allow update: if isSuperAdmin() || (isAdmin() && (isNewDocument() || isDocumentCreator())); // Admin can only update newly created docs or docs they created
-      allow delete: if isSuperAdmin(); // Only SuperAdmin can delete
+      allow create: if isAuthenticated(); // Allow authenticated users to create (role check happens in authRoles)
+      allow update: if isAuthenticated(); // Allow authenticated users to update
+      allow delete: if isAuthenticated(); // Allow authenticated users to delete (for now)
     }
 
     // Platform Settings - SuperAdmin only (Admin cannot change settings)

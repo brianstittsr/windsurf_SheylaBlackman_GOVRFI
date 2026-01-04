@@ -311,14 +311,14 @@ export default function SamAgentPage() {
                   <div className="space-y-2">
                     <Label>Set-Aside</Label>
                     <Select
-                      value={filters.setAside}
-                      onValueChange={(v) => setFilters({ ...filters, setAside: v })}
+                      value={filters.setAside || "all"}
+                      onValueChange={(v) => setFilters({ ...filters, setAside: v === "all" ? "" : v })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Any" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Any</SelectItem>
+                        <SelectItem value="all">Any</SelectItem>
                         <SelectItem value="SBA">8(a)</SelectItem>
                         <SelectItem value="SDVOSB">SDVOSB</SelectItem>
                         <SelectItem value="WOSB">WOSB</SelectItem>
@@ -354,14 +354,14 @@ export default function SamAgentPage() {
                   <div className="space-y-2">
                     <Label>Notice Type</Label>
                     <Select
-                      value={filters.noticeType}
-                      onValueChange={(v) => setFilters({ ...filters, noticeType: v })}
+                      value={filters.noticeType || "all"}
+                      onValueChange={(v) => setFilters({ ...filters, noticeType: v === "all" ? "" : v })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Any" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Any</SelectItem>
+                        <SelectItem value="all">Any</SelectItem>
                         <SelectItem value="o">Solicitation</SelectItem>
                         <SelectItem value="p">Presolicitation</SelectItem>
                         <SelectItem value="k">Combined Synopsis</SelectItem>
@@ -372,8 +372,8 @@ export default function SamAgentPage() {
                   <div className="space-y-2">
                     <Label>Status</Label>
                     <Select
-                      value={filters.isActive}
-                      onValueChange={(v) => setFilters({ ...filters, isActive: v })}
+                      value={filters.isActive || "all"}
+                      onValueChange={(v) => setFilters({ ...filters, isActive: v === "all" ? "" : v })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -381,7 +381,7 @@ export default function SamAgentPage() {
                       <SelectContent>
                         <SelectItem value="true">Active Only</SelectItem>
                         <SelectItem value="false">Inactive Only</SelectItem>
-                        <SelectItem value="">All</SelectItem>
+                        <SelectItem value="all">All</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

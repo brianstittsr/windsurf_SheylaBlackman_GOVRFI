@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { onAuthStateChanged, signOut as firebaseSignOut, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, updateDoc, Timestamp } from "firebase/firestore";
-import { getTeamMemberByAuthUid, findAndLinkTeamMember } from "@/lib/auth-team-member-link";
+import { findAndLinkTeamMember, getTeamMemberByAuthUid, linkAuthToTeamMember } from "@/lib/auth-team-member-link";
 import { COLLECTIONS, type TeamMemberDoc } from "@/lib/schema";
 
 // User profile fields
@@ -225,6 +225,14 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
           if (teamMember) {
             console.log("Linked Team Member found:", teamMember.id, teamMember.firstName, teamMember.lastName);
             setLinkedTeamMember(teamMember);
+            
+            // Ensure authRoles document exists for Firestore security rules
+            // This handles the case where user was linked before authRoles was implemented
+            try {
+              await linkAuthToTeamMember(teamMember.id, firebaseUser.uid, teamMember.role);
+            } catch (authRoleError) {
+              console.warn("Could not sync authRoles (may already exist):", authRoleError);
+            }
             
             // Map Team Member data to profile
             const mappedProfile = mapTeamMemberToProfile(teamMember);
